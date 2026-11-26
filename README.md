@@ -1,62 +1,99 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400"></a></p>
+# Shape Marketing: API de envío de SMS en Laravel 8
 
-<p align="center">
-<a href="https://travis-ci.org/laravel/framework"><img src="https://travis-ci.org/laravel/framework.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+[![PHP](https://img.shields.io/badge/PHP-%5E7.3%20%7C%20%5E8.0-777BB4?logo=php&logoColor=white)](https://www.php.net/)
+[![Laravel](https://img.shields.io/badge/Laravel-8-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/)
+[![Sanctum](https://img.shields.io/badge/Auth-Laravel%20Sanctum-FF2D20?logo=laravel&logoColor=white)](https://laravel.com/docs/8.x/sanctum)
+[![Vue](https://img.shields.io/badge/Vue-2-4FC08D?logo=vuedotjs&logoColor=white)](https://v2.vuejs.org/)
+[![Laravel Mix](https://img.shields.io/badge/Laravel%20Mix-5-F9645D)](https://laravel-mix.com/)
+[![Estado](https://img.shields.io/badge/estado-archivo%20hist%C3%B3rico-lightgrey)](#estado-del-proyecto)
 
-## About Laravel
+API REST para enviar mensajes de texto (SMS) de campañas de marketing a través de una pasarela externa. Autentica a los usuarios con tokens de Laravel Sanctum y solo permite enviar a los usuarios con estado `ACTIVE`.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Qué problema resuelve
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Expone un único punto de entrada autenticado para que otras aplicaciones envíen SMS a una lista de destinatarios, sin compartir las credenciales de la pasarela con cada cliente. Cada envío queda etiquetado con el usuario que lo solicitó.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Endpoints
 
-## Learning Laravel
+| Método | Ruta | Autenticación | Descripción |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/auth/login` | No | Valida credenciales y devuelve un token de acceso |
+| `POST` | `/api/v1/send-message` | Bearer (Sanctum) | Envía un SMS a una lista de destinatarios |
+| `POST` | `/api/auth/logout` | Bearer (Sanctum) | Revoca el token actual |
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+Cuerpo de `send-message`:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains over 1500 video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```json
+{
+  "textMessage": "Texto del mensaje",
+  "isTest": true,
+  "recipients": [{ "phone": "573001112233" }]
+}
+```
 
-## Laravel Sponsors
+Si el usuario autenticado no tiene estado `ACTIVE`, la API responde `"NOVALIDO"` y no envía nada.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the Laravel [Patreon page](https://patreon.com/taylorotwell).
+## Estado del proyecto
 
-### Premium Partners
+Es la base de una API de 2021: el flujo de autenticación y el envío de SMS funcionan como se describe arriba. Las tablas `text_messages`, `customers`, `urls`, `status_codes`, `balances` y `packages` están creadas como andamios (solo `id` y marcas de tiempo) y la interfaz Vue es un componente de ejemplo. No hay un panel web terminado.
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Cubet Techno Labs](https://cubettech.com)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[Many](https://www.many.co.uk)**
-- **[Webdock, Fast VPS Hosting](https://www.webdock.io/en)**
-- **[DevSquad](https://devsquad.com)**
-- **[Curotec](https://www.curotec.com/)**
-- **[OP.GG](https://op.gg)**
+## Estructura
 
-## Contributing
+```
+.
+├── app/
+│   ├── Http/Controllers/
+│   │   ├── AuthController.php         # Registro, login y logout con Sanctum
+│   │   └── api/SMSController.php      # Envío de SMS a la pasarela externa
+│   ├── Models/User.php                # Usuario con username y status (INACTIVE por defecto)
+│   └── Traits/ApiResponser.php        # Respuestas JSON uniformes
+├── config/external.php                # URL y credenciales de la pasarela (desde el entorno)
+├── database/migrations/               # Usuarios, tokens y tablas base del dominio
+├── resources/js/                      # Componente Vue de ejemplo (Laravel Mix)
+└── routes/api.php                     # Rutas de la API
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Requisitos
 
-## Code of Conduct
+- PHP 7.3 u 8.0 o superior y Composer 2.
+- MySQL (u otra base de datos compatible con Laravel).
+- Node.js y npm solo si vas a compilar los recursos de Vue.
+- Una cuenta en la pasarela de SMS y sus credenciales.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Ejecución local
 
-## Security Vulnerabilities
+```bash
+git clone git@github.com:KevinAndrey96/shape-marketing.git
+cd shape-marketing
+composer install
+cp .env.example .env
+php artisan key:generate
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Completa en `.env` los datos de la base de datos y de la pasarela:
 
-## License
+```
+DB_DATABASE=***REMOVED***
+DB_USERNAME=<usuario>
+DB_PASSWORD=<clave>
+URL_SMS_EXTERNAL_API=<url de la pasarela>
+SMS_EXTERNAL_API_USER=<usuario de la pasarela>
+SMS_EXTERNAL_API_PASSWORD=<clave de la pasarela>
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Luego ejecuta las migraciones y levanta el servidor:
+
+```bash
+php artisan migrate
+php artisan serve
+```
+
+## Seguridad
+
+Las credenciales de la base de datos, la clave de la aplicación y las de la pasarela de SMS se leen del entorno y ya no están en el código. El historial de Git de versiones anteriores puede contener valores antiguos, por lo que deben considerarse comprometidos y rotarse antes de reutilizar el proyecto.
+
+## Licencia
+
+Sin licencia de código abierto. Todos los derechos reservados.
+
+El código no se distribuye bajo ninguna licencia abierta; su uso o redistribución requiere autorización expresa del titular.
