@@ -42,8 +42,8 @@ class SMSController extends Controller
                 [
                     'headers' => ['Content-type' => 'application/json'],
                     'auth' => [
-                        '***REMOVED***',
-                        '***REMOVED***'
+                        config('external.sms_user'),
+                        config('external.sms_password')
                     ],
                     'json' => $apiRequest,
                 ]
